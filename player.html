@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web MP3 Player</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to bottom, #1a1a2e, #0f3460);
+            color: white;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .sidebar {
+    width: 250px;
+    background: #16213e;
+    color: white;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 10; /* Ensure it's above other content */
+}
+
+        .sidebar.hidden {
+            transform: translateX(-100%);
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar li {
+            background: #1a1a2e;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar li button {
+            background: #e94560;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .sidebar li button:hover {
+            background: #ff6f91;
+        }
+
+        .content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .player-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #e94560;
+        }
+
+        .file-input {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        label {
+            padding: 10px 20px;
+            background: #e94560;
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        label:hover {
+            background: #ff6f91;
+        }
+
+        audio {
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .control-button {
+            background: #e94560;
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-button:hover {
+            background: #ff6f91;
+        }
+
+        .equalizer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            height: 50px;
+        }
+
+        .bar {
+            width: 10px;
+            background: #e94560;
+            border-radius: 5px;
+            transform-origin: bottom;
+            transition: height 0.1s ease;
+        }
+
+        .toggle-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .toggle-button:hover {
+            background: #ff6f91;
+        }
+    </style>
+</head>
+<body>
+    <button class="toggle-button" onclick="toggleSidebar()">☰</button>
+    <div class="sidebar hidden" id="sidebar">
+        <ul id="trackList"></ul>
+    </div>
+    <div class="content">
+        <div class="player-container">
+            <h1>Web MP3 Player</h1>
+            <div class="file-input">
+                <label for="folderInput">Upload MP3 Folder</label>
+                <input type="file" id="folderInput" webkitdirectory directory multiple>
+            </div>
+            <audio id="audioPlayer" controls></audio>
+            <div class="equalizer" id="equalizer">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+            </div>
+            <div class="controls">
+                <button class="control-button" onclick="toggleLoop()">🔁</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const folderInput = document.getElementById('folderInput');
+        const trackList = document.getElementById('trackList');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const equalizer = document.getElementById('equalizer');
+        const sidebar = document.getElementById('sidebar');
+        const loopButton = document.querySelector('.control-button');
+
+        let bars = Array.from(equalizer.children);
+        let isLooping = false;
+
+        // Toggle sidebar visibility
+        function toggleSidebar() {
+            sidebar.classList.toggle('hidden');
+        }
+
+        // Close sidebar if clicked outside
+        document.addEventListener('click', (event) => {
+            if (!sidebar.contains(event.target) && !event.target.closest('.toggle-button')) {
+                sidebar.classList.add('hidden');
+            }
+        });
+
+        // MP3 folder input event
+        folderInput.addEventListener('change', (event) => {
+            const files = Array.from(event.target.files);
+            const mp3Files = files.filter(file => file.type === 'audio/mpeg');
+
+            trackList.innerHTML = '';
+
+            mp3Files.forEach((file, index) => {
+                const listItem = document.createElement('li');
+                const playButton = document.createElement('button');
+
+                playButton.textContent = 'Play';
+                playButton.addEventListener('click', () => {
+                    const fileURL = URL.createObjectURL(file);
+                    audioPlayer.src = fileURL;
+                    audioPlayer.play();
+                });
+
+                listItem.textContent = file.name;
+                listItem.appendChild(playButton);
+                trackList.appendChild(listItem);
+            });
+        });
+
+        // Audio visualization
+        function visualizeAudio() {
+            if (!audioPlayer.src) return;
+
+            const audioContext = new AudioContext();
+            const analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaElementSource(audioPlayer);
+
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+
+            analyser.fftSize = 64;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function updateEqualizer() {
+                analyser.getByteFrequencyData(dataArray);
+
+                bars.forEach((bar, index) => {
+                    const height = (dataArray[index] / 255) * 50;
+                    bar.style.height = `${height}px`;
+                });
+
+                requestAnimationFrame(updateEqualizer);
+            }
+
+            updateEqualizer();
+        }
+
+        audioPlayer.addEventListener('play', visualizeAudio);
+
+        // Seekable with keyboard arrows (left/right)
+        document.addEventListener('keydown', (event) => {
+            if (audioPlayer.paused) return;
+
+            if (event.key === 'ArrowRight') {
+                audioPlayer.currentTime += 5; // Seek forward by 5 seconds
+            } else if (event.key === 'ArrowLeft') {
+                audioPlayer.currentTime -= 5; // Seek backward by 5 seconds
+            }
+        });
+
+        // Loop toggle function
+        function toggleLoop() {
+            isLooping = !isLooping;
+            audioPlayer.loop = isLooping;
+            loopButton.style.background = isLooping ? '#ff6f91' : '#e94560';
+        }
+    </script>
+</body>
+</html>
