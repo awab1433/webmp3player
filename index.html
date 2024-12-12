@@ -19,19 +19,19 @@
         }
 
         .sidebar {
-    width: 250px;
-    background: #16213e;
-    color: white;
-    padding: 20px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-    overflow-y: auto;
-    transition: transform 0.3s ease;
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    z-index: 10; /* Ensure it's above other content */
-}
+            width: 250px;
+            background: #16213e;
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 10; /* Ensure it's above other content */
+        }
 
         .sidebar.hidden {
             transform: translateX(-100%);
@@ -173,6 +173,14 @@
         .toggle-button:hover {
             background: #ff6f91;
         }
+
+        .now-playing {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 10px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -182,11 +190,13 @@
     </div>
     <div class="content">
         <div class="player-container">
+            
             <h1>Web MP3 Player</h1>
             <div class="file-input">
                 <label for="folderInput">Upload MP3 Folder</label>
                 <input type="file" id="folderInput" webkitdirectory directory multiple>
             </div>
+			<div class="now-playing" id="nowPlaying">Now Playing: </div>
             <audio id="audioPlayer" controls></audio>
             <div class="equalizer" id="equalizer">
                 <div class="bar"></div>
@@ -208,6 +218,7 @@
         const equalizer = document.getElementById('equalizer');
         const sidebar = document.getElementById('sidebar');
         const loopButton = document.querySelector('.control-button');
+        const nowPlayingLabel = document.getElementById('nowPlaying');
 
         let bars = Array.from(equalizer.children);
         let isLooping = false;
@@ -240,6 +251,9 @@
                     const fileURL = URL.createObjectURL(file);
                     audioPlayer.src = fileURL;
                     audioPlayer.play();
+
+                    // Update the now playing label
+                    nowPlayingLabel.textContent = 'Now Playing: ' + file.name;
                 });
 
                 listItem.textContent = file.name;
